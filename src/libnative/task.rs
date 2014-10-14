@@ -29,10 +29,11 @@ use io;
 use std::task::{TaskBuilder, Spawner};
 
 /// Creates a new Task which is ready to execute as a 1:1 task.
-pub fn new(stack_bounds: (uint, uint)) -> Box<Task> {
+pub fn new(stack_bounds: (uint, uint), stack_guard: uint) -> Box<Task> {
     let mut task = box Task::new();
     let mut ops = ops();
     ops.stack_bounds = stack_bounds;
+    ops.stack_guard = stack_guard;
     task.put_runtime(ops);
     return task;
 }
@@ -44,6 +45,7 @@ fn ops() -> Box<Ops> {
         io: io::IoFactory::new(),
         // these *should* get overwritten
         stack_bounds: (0, 0),
+        stack_guard: 0
     }
 }
 
@@ -115,6 +117,8 @@ struct Ops {
     // native tasks necessarily know their precise bounds, hence this is
     // optional.
     stack_bounds: (uint, uint),
+
+    stack_guard: uint
 }
 
 impl rt::Runtime for Ops {
@@ -137,6 +141,14 @@ impl rt::Runtime for Ops {
     }
 
     fn stack_bounds(&self) -> (uint, uint) { self.stack_bounds }
+
+    fn stack_guard(&self) -> Option<uint> {
+        if self.stack_guard != 0 {
+            Some(self.stack_guard)
+        } else {
+            None
+        }
+    }
 
     fn can_block(&self) -> bool { true }
 
